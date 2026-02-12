@@ -1,0 +1,175 @@
+@page "/"
+@rendermode InteractiveServer
+@using FanPulseDashboard.Services
+@using Microsoft.AspNetCore.Components.Web
+@inject ChatService Chat
+@implements IAsyncDisposable
+
+<div class="dashboard">
+    @if (Chat.InitError != null)
+    {
+        <div class="error-banner">
+            <strong>⚠️ @Chat.InitError</strong>
+        </div>
+    }
+    else if (!Chat.IsInitialized)
+    {
+        <div class="connecting">
+            <div class="spinner"></div>
+            <p>Connecting to both MCP servers...</p>
+            <p class="connecting-detail">Starting FanPulse (C#) and FanPulse Apps (TypeScript)</p>
+        </div>
+    }
+    else
+    {
+        <!-- Input bar -->
+        <div class="input-bar">
+            <input @bind="UserInput"
+                   @bind:event="oninput"
+                   @onkeydown="HandleKeyDown"
+                   placeholder="Ask about fans, segments, merchandise, promotions..."
+                   disabled="@_sending"
+                   class="chat-input" />
+            <button @onclick="SendMessage" disabled="@(_sending || string.IsNullOrWhiteSpace(UserInput))" class="send-btn">
+                @if (_sending) { <span class="spinner-sm"></span> } else { <span>Send →</span> }
+            </button>
+        </div>
+
+        <!-- Side-by-side panels -->
+        <div class="panels">
+            <!-- Left panel: C# Server (text only) -->
+            <div class="panel panel-csharp">
+                <div class="panel-header">
+                    <div class="panel-badge badge-csharp">C#</div>
+                    <div>
+                        <div class="panel-title">FanPulse Server</div>
+                        <div class="panel-subtitle">Text/JSON responses · @Chat.CSharpToolCount tools</div>
+                    </div>
+                </div>
+                <div class="chat-messages" id="csharp-messages">
+                    @if (Chat.CSharpChat.Count == 0)
+                    {
+                        <div class="empty-state">
+                            <p>📝 This panel shows <strong>text-only</strong> responses.</p>
+                            <p>The AI reads JSON from the MCP server and summarizes it in words.</p>
+                        </div>
+                    }
+                    @foreach (var msg in Chat.CSharpChat)
+                    {
+                        <div class="message message-@msg.Role">
+                            <div class="message-role">@(msg.Role == "user" ? "You" : "🤖 FanPulse")</div>
+                            <div class="message-text">@((MarkupString)FormatText(msg.Text))</div>
+                        </div>
+                    }
+                    @if (_sending)
+                    {
+                        <div class="message message-assistant">
+                            <div class="message-role">🤖 FanPulse</div>
+                            <div class="message-text typing">Thinking...</div>
+                        </div>
+                    }
+                </div>
+            </div>
+
+            <!-- Right panel: TypeScript Server (with UIs) -->
+            <div class="panel panel-apps">
+                <div class="panel-header">
+                    <div class="panel-badge badge-apps">TS</div>
+                    <div>
+                        <div class="panel-title">FanPulse Apps Server</div>
+                        <div class="panel-subtitle">Interactive UI responses · @Chat.AppsToolCount tools</div>
+                    </div>
+                </div>
+                <div class="chat-messages" id="apps-messages">
+                    @if (Chat.AppsChat.Count == 0)
+                    {
+                        <div class="empty-state">
+                            <p>✨ This panel shows <strong>interactive UI</strong> responses.</p>
+                            <p>The MCP Apps extension returns rich HTML dashboards, charts, and forms.</p>
+                        </div>
+                    }
+                    @foreach (var msg in Chat.AppsChat)
+                    {
+                        <div class="message message-@msg.Role">
+                            <div class="message-role">@(msg.Role == "user" ? "You" : "🤖 FanPulse Apps")</div>
+                            <div class="message-text">@((MarkupString)FormatText(msg.Text))</div>
+                            @if (msg.UiHtml != null)
+                            {
+                                <div class="ui-frame-container">
+                                    <div class="ui-frame-label">📊 Interactive MCP App</div>
+                                    <iframe class="ui-frame"
+                                            srcdoc="@msg.UiHtml"
+                                            sandbox="allow-scripts allow-same-origin"
+                                            loading="lazy"></iframe>
+                                </div>
+                            }
+                        </div>
+                    }
+                    @if (_sending)
+                    {
+                        <div class="message message-assistant">
+                            <div class="message-role">🤖 FanPulse Apps</div>
+                            <div class="message-text typing">Thinking...</div>
+                        </div>
+                    }
+                </div>
+            </div>
+        </div>
+    }
+</div>
+
+@code {
+    private string UserInput { get; set; } = "";
+    private bool _sending;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender && !Chat.IsInitialized && Chat.InitError == null)
+        {
+            await Chat.InitializeAsync();
+            StateHasChanged();
+        }
+    }
+
+    private async Task HandleKeyDown(KeyboardEventArgs e)
+    {
+        if (e.Key == "Enter" && !_sending && !string.IsNullOrWhiteSpace(UserInput))
+        {
+            await SendMessage();
+        }
+    }
+
+    private async Task SendMessage()
+    {
+        if (string.IsNullOrWhiteSpace(UserInput) || _sending) return;
+
+        var message = UserInput.Trim();
+        UserInput = "";
+        _sending = true;
+        StateHasChanged();
+
+        await Chat.SendMessageAsync(message);
+
+        _sending = false;
+        StateHasChanged();
+    }
+
+    private static string FormatText(string text)
+    {
+        // Basic markdown-like formatting for display
+        return text
+            .Replace("&", "&amp;")
+            .Replace("<", "&lt;")
+            .Replace(">", "&gt;")
+            .Replace("\n\n", "</p><p>")
+            .Replace("\n", "<br/>")
+            .Replace("**", "<strong>")  // simplified — won't close tags perfectly
+            ;
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        // Service is singleton, disposal handled at app shutdown
+        await ValueTask.CompletedTask;
+    }
+}

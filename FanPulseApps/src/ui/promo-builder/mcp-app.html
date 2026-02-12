@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="color-scheme" content="light dark">
+  <title>Promotion Builder</title>
+</head>
+<body>
+  <main class="main">
+    <header class="header">
+      <h1 class="title">🏷️ Promotion Builder</h1>
+    </header>
+    <form class="promo-form" id="promo-form">
+      <label class="field">
+        <span class="field-label">Promotion Name</span>
+        <input type="text" id="promo-name" class="input" placeholder="e.g. Holiday Jersey Sale" required />
+      </label>
+      <label class="field">
+        <span class="field-label">Description</span>
+        <textarea id="promo-desc" class="input textarea" placeholder="Describe the promotion..." required></textarea>
+      </label>
+      <div class="field-row">
+        <label class="field">
+          <span class="field-label">Discount %</span>
+          <div class="slider-group">
+            <input type="range" id="promo-discount" min="5" max="50" value="15" class="slider" />
+            <span class="slider-value" id="discount-value">15%</span>
+          </div>
+        </label>
+        <label class="field">
+          <span class="field-label">Target Segment</span>
+          <select id="promo-segment" class="select">
+            <option value="all">All Fans</option>
+            <option value="high_engagement">High Engagement</option>
+            <option value="low_engagement">Low Engagement</option>
+            <option value="no_purchases">No Purchases</option>
+          </select>
+        </label>
+      </div>
+      <div class="field-row">
+        <label class="field">
+          <span class="field-label">Product Category</span>
+          <select id="promo-category" class="select">
+            <option value="all">All Categories</option>
+            <option value="Jersey">Jersey</option>
+            <option value="Hat">Hat</option>
+            <option value="Accessory">Accessory</option>
+            <option value="Drinkware">Drinkware</option>
+            <option value="Apparel">Apparel</option>
+            <option value="Equipment">Equipment</option>
+            <option value="Collectible">Collectible</option>
+          </select>
+        </label>
+      </div>
+      <div class="field-row">
+        <label class="field">
+          <span class="field-label">Start Date</span>
+          <input type="date" id="promo-start" class="input" />
+        </label>
+        <label class="field">
+          <span class="field-label">End Date</span>
+          <input type="date" id="promo-end" class="input" />
+        </label>
+      </div>
+      <button type="submit" class="submit-btn">🚀 Create Promotion</button>
+    </form>
+    <section class="result-panel" id="result-panel"></section>
+  </main>
+  <script type="module" src="./mcp-app.ts"></script>
+</body>
+</html>

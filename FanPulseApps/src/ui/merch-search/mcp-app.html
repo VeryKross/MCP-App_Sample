@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="color-scheme" content="light dark">
+  <title>Merchandise Search</title>
+</head>
+<body>
+  <main class="main">
+    <header class="header">
+      <h1 class="title">🛍️ Merchandise Catalog</h1>
+    </header>
+    <section class="filters" id="filters">
+      <label class="filter-label">Team: <select id="filter-team" class="select"><option value="">All</option></select></label>
+      <label class="filter-label">Category: <select id="filter-category" class="select"><option value="">All</option></select></label>
+      <label class="filter-label">Sort: <select id="sort" class="select">
+        <option value="category">Category</option>
+        <option value="price-asc">Price ↑</option>
+        <option value="price-desc">Price ↓</option>
+        <option value="name">Name</option>
+      </select></label>
+    </section>
+    <section class="results-info" id="results-info"></section>
+    <section class="product-grid" id="product-grid"></section>
+  </main>
+  <script type="module" src="./mcp-app.ts"></script>
+</body>
+</html>

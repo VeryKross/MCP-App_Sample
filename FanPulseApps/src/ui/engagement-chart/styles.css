@@ -1,0 +1,21 @@
+.main { padding: 16px; max-width: 1000px; margin: 0 auto; }
+.header { margin-bottom: 16px; }
+.title { font-size: 1.4rem; font-weight: 700; }
+.subtitle { font-size: 0.9rem; color: var(--color-text-secondary, #6b7280); }
+
+.chart-section { margin-bottom: 20px; }
+.chart-container { position: relative; height: 300px; }
+
+.fan-table { width: 100%; border-collapse: collapse; font-size: 0.82rem; }
+.fan-table th { text-align: left; padding: 6px 8px; border-bottom: 2px solid var(--color-border-primary, #e5e7eb); font-weight: 600; color: var(--color-text-secondary, #6b7280); }
+.fan-table td { padding: 6px 8px; border-bottom: 1px solid var(--color-border-primary, #e5e7eb); }
+
+.score-badge {
+  display: inline-block;
+  background: #6366f1;
+  color: white;
+  font-size: 0.75rem;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 10px;
+}
