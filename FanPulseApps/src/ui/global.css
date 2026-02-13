@@ -1,2 +1,21 @@
+:root {
+  color-scheme: light dark;
+  --color-background-primary: light-dark(#ffffff, #111827);
+  --color-background-secondary: light-dark(#f9fafb, #1f2937);
+  --color-background-tertiary: light-dark(#f3f4f6, #374151);
+  --color-text-primary: light-dark(#1f2937, #f9fafb);
+  --color-text-secondary: light-dark(#6b7280, #9ca3af);
+  --color-text-tertiary: light-dark(#9ca3af, #6b7280);
+  --color-border-primary: light-dark(#e5e7eb, #374151);
+  --color-border-secondary: light-dark(#d1d5db, #4b5563);
+  --color-ring-info: light-dark(#2563eb, #3b82f6);
+  --border-radius-sm: 6px;
+  --border-radius-md: 8px;
+  --border-radius-full: 9999px;
+  --border-width-regular: 1px;
+  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.1);
+  --font-sans: system-ui, -apple-system, sans-serif;
+}
+
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-body { font-family: system-ui, -apple-system, sans-serif; line-height: 1.5; color: var(--color-text-primary, #1f2937); background: var(--color-bg-primary, #ffffff); }
+body { font-family: var(--font-sans); line-height: 1.5; color: var(--color-text-primary); background: var(--color-background-primary); }
