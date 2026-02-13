@@ -12,10 +12,12 @@ import * as db from "../data/database.js";
 import type { SegmentName } from "../types.js";
 import { SEGMENT_DESCRIPTIONS } from "../types.js";
 
-// Resolve dist directory for built HTML files
+// Resolve dist directory for built HTML files.
+// In dev (.ts): src/tools/ → ../../dist
+// Compiled (.js): dist/src/tools/ → ../.. (back to dist/)
 const DIST_DIR = import.meta.filename.endsWith(".ts")
   ? path.join(import.meta.dirname, "..", "..", "dist")
-  : path.join(import.meta.dirname, "..");
+  : path.join(import.meta.dirname, "..", "..");
 
 async function loadUiHtml(filename: string): Promise<string> {
   return fs.readFile(path.join(DIST_DIR, filename), "utf-8");
