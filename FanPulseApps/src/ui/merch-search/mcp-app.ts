@@ -21,6 +21,22 @@ const resultsInfo = document.getElementById("results-info")!;
 let allProducts: Product[] = [];
 const app = new App({ name: "Merch Search", version: "1.0.0" });
 
+// Render from tool result data sent by the host (avoids re-fetching)
+app.ontoolresult = (params) => {
+  const text = params.content
+    ?.filter((c): c is { type: "text"; text: string } => c.type === "text")
+    .map((c) => c.text)
+    .join("");
+  if (text) {
+    try {
+      const data = JSON.parse(text);
+      allProducts = data.products;
+      populateFilters(allProducts);
+      applyFilters();
+    } catch { /* ignore parse errors */ }
+  }
+};
+
 const CATEGORY_ICONS: Record<string, string> = {
   Jersey: "👕", Hat: "🧢", Accessory: "🧣", Drinkware: "☕",
   Apparel: "🧥", Equipment: "⚽", Collectible: "🏆",
@@ -74,19 +90,6 @@ function populateFilters(products: Product[]) {
   });
 }
 
-async function fetchData() {
-  try {
-    const result = await app.callServerTool({ name: "SearchMerchandise", arguments: { inStockOnly: false } });
-    const text = result.content!.filter((c): c is { type: "text"; text: string } => c.type === "text").map((c) => c.text).join("");
-    const data = JSON.parse(text);
-    allProducts = data.products;
-    populateFilters(allProducts);
-    applyFilters();
-  } catch (e) {
-    console.error("Failed to fetch merchandise:", e);
-  }
-}
-
 teamSelect.addEventListener("change", applyFilters);
 categorySelect.addEventListener("change", applyFilters);
 sortSelect.addEventListener("change", applyFilters);
@@ -100,4 +103,3 @@ function handleHostContext(ctx: McpUiHostContext) {
 app.onhostcontextchanged = handleHostContext;
 applyDocumentTheme(window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
 app.connect().then(() => { const ctx = app.getHostContext(); if (ctx) handleHostContext(ctx); });
-setTimeout(fetchData, 100);

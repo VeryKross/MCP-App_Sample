@@ -1,17 +1,24 @@
 # FanPulse — C# MCP Server
 
-A .NET 10 console application that implements a [Model Context Protocol (MCP)](https://modelcontextprotocol.io/) server over **stdio transport**. It exposes seven fan-engagement tools backed by a SQLite database — any MCP client (Claude Desktop, GitHub Copilot, VS Code, custom apps) can connect and start querying fan data, logging events, and creating promotions.
+A .NET 10 application that implements a [Model Context Protocol (MCP)](https://modelcontextprotocol.io/) server. It exposes seven fan-engagement tools backed by a SQLite database — any MCP client (Claude Desktop, GitHub Copilot, VS Code, custom apps) can connect and start querying fan data, logging events, and creating promotions.
+
+Supports two transports:
+- **stdio** (default) — for direct client integration (VS Code, Claude Desktop, etc.)
+- **HTTP** (`--http` flag) — listens on port 5001 for browser-based clients like the React Dashboard
 
 ```mermaid
 flowchart LR
     Client["MCP Client\n(Claude Desktop, Copilot, VS Code, …)"]
     Stdio["stdio\n(stdin / stdout)"]
-    Host[".NET Generic Host"]
+    HTTP["HTTP\n(:5001)"]
+    Host[".NET Host"]
     Tools["FanTools\n(7 tools)"]
     DB["SQLite\n(fanpulse.db)"]
 
     Client -- JSON-RPC --> Stdio
+    Client -- JSON-RPC --> HTTP
     Stdio --> Host
+    HTTP --> Host
     Host --> Tools
     Tools -- ADO.NET --> DB
 ```
@@ -31,10 +38,10 @@ FanPulse/
 
 | File | What it does |
 |---|---|
-| **`Program.cs`** | Calls `DatabaseInitializer.Initialize()` to ensure the DB exists, then builds a .NET Generic Host with `.AddMcpServer().WithStdioServerTransport().WithTools<FanTools>()`. That single chain is all it takes to wire up a working MCP server. |
+| **`Program.cs`** | Calls `DatabaseInitializer.Initialize()` to ensure the DB exists. Checks for `--http` flag or `FANPULSE_HTTP=true` env var: if set, starts a Kestrel web server on port 5001 with `.WithHttpTransport()` + `MapMcp()`; otherwise starts a .NET Generic Host with `.WithStdioServerTransport()`. Both paths register tools via `.WithTools<FanTools>()`. |
 | **`Tools/FanTools.cs`** | One class annotated with `[McpServerToolType]`. Each tool is a `public static` method decorated with `[McpServerTool]` and `[Description]`. Parameters use `[Description]` attributes so MCP clients can show meaningful prompts. All tools return JSON strings via `System.Text.Json`. |
 | **`Data/DatabaseInitializer.cs`** | Creates 5 tables (`Fans`, `EngagementEvents`, `Merchandise`, `Purchases`, `Promotions`) and seeds them with sample data on first run. Idempotent — safe to call repeatedly. |
-| **`FanPulse.csproj`** | Targets `net10.0`. References three NuGet packages (see [Dependencies](#dependencies)). |
+| **`FanPulse.csproj`** | Targets `net10.0` with `Microsoft.NET.Sdk.Web`. References NuGet packages for MCP (server + AspNetCore HTTP transport) and SQLite. |
 
 ## Tools
 

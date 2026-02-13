@@ -43,8 +43,7 @@ graph LR
     style LLM fill:#6366f1,color:#fff
 ```
 
-The Dashboard connects to **one** server at a time — the user picks which one at startup.
-Both servers read and write the same database, so the data is always consistent.
+The Dashboard connects to **both** servers simultaneously over HTTP and shows their responses side-by-side — text on the left, interactive UIs on the right.
 
 ---
 
@@ -134,23 +133,36 @@ When a user runs the Dashboard, here's what happens step by step:
 ```mermaid
 sequenceDiagram
     participant User
-    participant Dashboard
+    participant Dashboard as React Dashboard
     participant LLM as GitHub Models (GPT-4o)
-    participant Server as MCP Server
+    participant CS as C# MCP Server
+    participant TS as TypeScript MCP Server
 
-    User->>Dashboard: Selects server (C# or TypeScript)
-    Dashboard->>Server: Launches via stdio
-    Server-->>Dashboard: Connection established
-    Dashboard-->>User: Shows welcome banner + available tools
+    User->>Dashboard: Opens http://localhost:5173
+    Dashboard->>CS: HTTP connect (port 5001)
+    Dashboard->>TS: HTTP connect (port 3001)
+    CS-->>Dashboard: Connected + tool list
+    TS-->>Dashboard: Connected + tool list
 
     User->>Dashboard: "Who are our most engaged fans?"
-    Dashboard->>LLM: User question + available tool list
+
+    Note over Dashboard: C# panel first (avoid rate limits)
+    Dashboard->>LLM: User question + C# tool list
     LLM->>Dashboard: "Call GetFanEngagementMetrics()"
-    Dashboard->>Server: MCP tool call
-    Server-->>Dashboard: JSON response (+ UI resource if Apps server)
+    Dashboard->>CS: MCP tool call (HTTP)
+    CS-->>Dashboard: JSON response
     Dashboard->>LLM: Tool result
-    LLM-->>Dashboard: Natural language answer
-    Dashboard-->>User: Formatted response (+ interactive chart if Apps)
+    LLM-->>Dashboard: Text summary
+    Dashboard-->>User: Left panel: text answer
+
+    Note over Dashboard: Then Apps panel
+    Dashboard->>LLM: User question + Apps tool list
+    LLM->>Dashboard: "Call GetFanEngagementMetrics()"
+    Dashboard->>TS: MCP tool call (HTTP)
+    TS-->>Dashboard: JSON + ui:// resource reference
+    Dashboard->>TS: Read UI resource
+    TS-->>Dashboard: Self-contained HTML
+    Dashboard-->>User: Right panel: interactive chart (AppBridge iframe)
 ```
 
 ---
@@ -296,7 +308,9 @@ graph TB
         NET[".NET 10"]
         SQLITE_CS["Microsoft.Data.Sqlite"]
         MCP_CS["ModelContextProtocol SDK"]
+        MCP_ASP["ModelContextProtocol.AspNetCore"]
         STDIO1["stdio transport"]
+        HTTP1["HTTP transport (:5001)"]
     end
 
     subgraph "FanPulse Apps — TypeScript Server"
@@ -307,13 +321,14 @@ graph TB
         CHARTJS["Chart.js"]
         VITE["Vite + singlefile plugin"]
         STDIO2["stdio transport"]
-        HTTP["HTTP/SSE transport"]
+        HTTP2["HTTP transport (:3001)"]
     end
 
-    subgraph "FanPulse Dashboard — C# Client"
-        NET2[".NET 10"]
-        MCP_CLIENT["ModelContextProtocol Client"]
-        MSAI["Microsoft.Extensions.AI"]
+    subgraph "FanPulse Dashboard — React App"
+        REACT["React + TypeScript"]
+        MCP_CLIENT["@modelcontextprotocol/sdk Client"]
+        APPBRIDGE["@modelcontextprotocol/ext-apps AppBridge"]
+        VITE2["Vite dev server"]
         OPENAI["GitHub Models · GPT-4o"]
     end
 
@@ -325,7 +340,7 @@ graph TB
     SQLITE_TS --> DB
 
     style NET fill:#512bd4,color:#fff
-    style NET2 fill:#512bd4,color:#fff
+    style REACT fill:#61dafb,color:#000
     style NODE fill:#339933,color:#fff
     style DB fill:#f59e0b,color:#000
 ```
@@ -336,9 +351,9 @@ graph TB
 
 | Component | Language | Transport | Returns | When to Use |
 |---|---|---|---|---|
-| **FanPulse** | C# / .NET | stdio | JSON text | Universal MCP client compatibility |
-| **FanPulse Apps** | TypeScript | stdio + HTTP | JSON + interactive UIs | Rich visual experiences in Claude/ChatGPT |
-| **Dashboard** | C# / .NET | — | AI chat | Standalone console for teams without AI clients |
+| **FanPulse** | C# / .NET | stdio + HTTP | JSON text | Universal MCP client compatibility |
+| **FanPulse Apps** | TypeScript | stdio + HTTP | JSON + interactive UIs | Rich visual experiences in VS Code, Claude, or Dashboard |
+| **Dashboard** | React / TypeScript | HTTP (client) | AI chat + AppBridge UIs | Side-by-side comparison of text vs interactive UX |
 
 The architecture is designed so that:
 - Both servers are **interchangeable** — same tools, same data, different UX

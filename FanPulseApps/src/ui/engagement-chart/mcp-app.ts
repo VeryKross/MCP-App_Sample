@@ -23,6 +23,28 @@ const lookbackLabel = document.getElementById("lookback-label")!;
 let chart: Chart | null = null;
 const app = new App({ name: "Engagement Chart", version: "1.0.0" });
 
+// Render from tool result data sent by the host (avoids re-fetching)
+app.ontoolresult = (params) => {
+  const text = params.content
+    ?.filter((c): c is { type: "text"; text: string } => c.type === "text")
+    .map((c) => c.text)
+    .join("");
+  if (text) {
+    try {
+      const data = JSON.parse(text);
+      lookbackLabel.textContent = `Last ${data.lookbackDays} days`;
+      if (data.fans) {
+        renderChart(data.fans);
+        renderFanList(data.fans);
+      } else if (data.metrics) {
+        // Single fan query — show as a single-entry list
+        renderChart([data.metrics]);
+        renderFanList([data.metrics]);
+      }
+    } catch { /* ignore parse errors */ }
+  }
+};
+
 const TEAM_COLORS: Record<string, string> = {
   Thunderbolts: "#6366f1",
   "River Wolves": "#0d9488",
@@ -122,19 +144,6 @@ function renderFanList(fans: FanMetric[]) {
     </table>`;
 }
 
-async function fetchData() {
-  try {
-    const result = await app.callServerTool({ name: "GetFanEngagementMetrics", arguments: {} });
-    const text = result.content!.filter((c): c is { type: "text"; text: string } => c.type === "text").map((c) => c.text).join("");
-    const data = JSON.parse(text);
-    lookbackLabel.textContent = `Last ${data.lookbackDays} days`;
-    renderChart(data.fans);
-    renderFanList(data.fans);
-  } catch (e) {
-    console.error("Failed to fetch engagement metrics:", e);
-  }
-}
-
 function handleHostContext(ctx: McpUiHostContext) {
   if (ctx.theme) applyDocumentTheme(ctx.theme);
   if (ctx.styles?.variables) applyHostStyleVariables(ctx.styles.variables);
@@ -144,4 +153,3 @@ function handleHostContext(ctx: McpUiHostContext) {
 app.onhostcontextchanged = handleHostContext;
 applyDocumentTheme(window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
 app.connect().then(() => { const ctx = app.getHostContext(); if (ctx) handleHostContext(ctx); });
-setTimeout(fetchData, 100);

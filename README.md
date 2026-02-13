@@ -4,17 +4,15 @@ A demo platform that shows how the **Model Context Protocol (MCP)** and the **MC
 
 ```mermaid
 graph LR
-    Browser["🌐 Browser"]
-    Dashboard["FanPulse Dashboard<br/>(Blazor Server)"]
+    Browser["🌐 Browser<br/>(React App)"]
     LLM["GPT-4o<br/>(GitHub Models)"]
-    CS["FanPulse<br/>C# MCP Server"]
-    TS["FanPulse Apps<br/>TS MCP Server"]
+    CS["FanPulse<br/>C# MCP Server<br/>:5001"]
+    TS["FanPulse Apps<br/>TS MCP Server<br/>:3001"]
     DB[("fanpulse.db")]
 
-    Browser <-->|SignalR| Dashboard
-    Dashboard -->|Chat + Function Calling| LLM
-    Dashboard <-->|stdio| CS
-    Dashboard <-->|stdio| TS
+    Browser -->|/api/chat| LLM
+    Browser <-->|HTTP| CS
+    Browser <-->|HTTP| TS
     CS --> DB
     TS --> DB
 ```
@@ -23,9 +21,9 @@ graph LR
 
 | Project | Language | Description |
 |---|---|---|
-| **[FanPulse](FanPulse/)** | C# / .NET 10 | MCP server exposing 7 fan-engagement tools over stdio. Returns JSON data. |
-| **[FanPulseApps](FanPulseApps/)** | TypeScript / Node.js | MCP server with the same 7 tools, plus 5 interactive HTML UIs via the [MCP Apps extension](https://github.com/modelcontextprotocol/ext-apps). |
-| **[FanPulseDashboard](FanPulseDashboard/)** | C# / Blazor Server | Web app that connects to **both** servers and shows their responses side-by-side — text on the left, rich interactive UIs on the right. |
+| **[FanPulse](FanPulse/)** | C# / .NET 10 | MCP server exposing 7 fan-engagement tools. Supports stdio (default) and HTTP (`--http` flag, port 5001). Returns JSON data. |
+| **[FanPulseApps](FanPulseApps/)** | TypeScript / Node.js | MCP server with the same 7 tools, plus 5 interactive HTML UIs via the [MCP Apps extension](https://github.com/modelcontextprotocol/ext-apps). Supports stdio and HTTP (port 3001). |
+| **[FanPulseDashboard](FanPulseDashboard/)** | React + TypeScript | Web app that connects to **both** servers over HTTP and shows their responses side-by-side — text on the left, rich interactive UIs on the right. Implements the `AppBridge` host protocol for native ext-apps rendering. |
 
 ## The Point
 
@@ -47,24 +45,31 @@ This makes the value of the MCP Apps extension immediately visible in a demo set
 ### Build & Run
 
 ```powershell
-# 1. Build the C# MCP server (also creates + seeds the database)
+# 1. Build and seed the database (run the C# server once, then Ctrl+C)
 dotnet build FanPulse
-dotnet run --project FanPulse   # run once to create fanpulse.db, then Ctrl+C
+dotnet run --project FanPulse   # creates fanpulse.db, then Ctrl+C
 
 # 2. Build the TypeScript MCP server
-cd FanPulseApps
-npm install
-npm run build
-cd ..
+cd FanPulseApps && npm install && npm run build && cd ..
 
-# 3. Set your GitHub Models token
+# 3. Install Dashboard dependencies
+cd FanPulseDashboard && npm install && cd ..
+
+# 4. Start all three services (each in its own terminal):
+
+# Terminal 1: C# MCP server (HTTP mode)
+dotnet run --project FanPulse -- --http
+
+# Terminal 2: TypeScript MCP server (HTTP mode)
+cd FanPulseApps && npm start
+
+# Terminal 3: React Dashboard
+cd FanPulseDashboard
 $env:GITHUB_TOKEN = "ghp_..."
-
-# 4. Launch the Dashboard
-dotnet run --project FanPulseDashboard
+npm run dev
 ```
 
-Open **http://localhost:5000** and start asking questions:
+Open **http://localhost:5173** and start asking questions:
 
 - *"Show me the fan segments"*
 - *"What merchandise do we have for the Thunderbolts?"*
@@ -74,11 +79,11 @@ Open **http://localhost:5000** and start asking questions:
 
 ## How It Works
 
-1. The **Dashboard** launches both MCP servers as child processes
-2. Your prompt is sent to **GPT-4o** twice — once with C# tools, once with TypeScript tools
+1. The **Dashboard** connects to both MCP servers over HTTP
+2. Your prompt is sent to **GPT-4o** twice — once with C# tools, once with TypeScript tools (sequentially to avoid rate limits)
 3. The LLM calls the appropriate MCP tools to fetch data
 4. The C# panel shows the AI's text summary
-5. The Apps panel shows the same data as an **interactive HTML visualization** (rendered in a sandboxed iframe)
+5. The Apps panel checks if the called tool has a `ui://` resource, fetches the HTML, loads it in a sandboxed iframe, and connects it via `AppBridge` + `PostMessageTransport` for interactive rendering
 
 Both servers read from the same SQLite database, so the underlying data is identical — only the presentation differs.
 
@@ -108,7 +113,6 @@ VS Code supports the MCP Apps extension natively, so the interactive UIs (segmen
 
 - [FanPulse Architecture](FanPulseApps/doc/FanPulse-Architecture.md) — System-wide architecture with Mermaid diagrams
 - [FanPulse Apps Overview](FanPulseApps/doc/FanPulseApps-Overview.md) — How the ext-apps extension works
-- [Dashboard Overview](FanPulseDashboard/doc/FanPulseDashboard-Overview.md) — How the Blazor web app is built
 
 Each project also has its own [README](FanPulse/README.md) with detailed structure, design decisions, and extension guides.
 
@@ -121,5 +125,5 @@ Each project also has its own [README](FanPulse/README.md) with detailed structu
 | Interactive UIs | [MCP Apps Extension](https://github.com/modelcontextprotocol/ext-apps) |
 | C# Server | .NET 10, Microsoft.Data.Sqlite, MCP SDK |
 | TypeScript Server | Node.js, better-sqlite3, Vite, ext-apps SDK |
-| Dashboard | ASP.NET Blazor Server, Microsoft.Extensions.AI |
+| Dashboard | React, TypeScript, Vite, AppBridge |
 | Database | SQLite (shared) |

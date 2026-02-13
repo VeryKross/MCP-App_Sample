@@ -51,6 +51,20 @@ const filterLabel = document.getElementById("filter-label")!;
 
 const app = new App({ name: "Fan Segments", version: "1.0.0" });
 
+// Render from tool result data sent by the host (avoids re-fetching)
+app.ontoolresult = (params) => {
+  const text = params.content
+    ?.filter((c): c is { type: "text"; text: string } => c.type === "text")
+    .map((c) => c.text)
+    .join("");
+  if (text) {
+    try {
+      const data = JSON.parse(text);
+      renderSegments(data.segments, data.teamFilter);
+    } catch { /* ignore parse errors */ }
+  }
+};
+
 function renderSegments(segments: Segment[], teamFilter: string) {
   filterLabel.textContent = teamFilter === "all" ? "All Teams" : teamFilter;
 
@@ -112,17 +126,6 @@ function renderFanDetail(segment: Segment) {
     </table>`;
 }
 
-async function fetchData() {
-  try {
-    const result = await app.callServerTool({ name: "GetFanSegments", arguments: {} });
-    const text = result.content!.filter((c): c is { type: "text"; text: string } => c.type === "text").map((c) => c.text).join("");
-    const data = JSON.parse(text);
-    renderSegments(data.segments, data.teamFilter);
-  } catch (e) {
-    console.error("Failed to fetch segments:", e);
-  }
-}
-
 function handleHostContext(ctx: McpUiHostContext) {
   if (ctx.theme) applyDocumentTheme(ctx.theme);
   if (ctx.styles?.variables) applyHostStyleVariables(ctx.styles.variables);
@@ -137,4 +140,3 @@ app.connect().then(() => {
   const ctx = app.getHostContext();
   if (ctx) handleHostContext(ctx);
 });
-setTimeout(fetchData, 100);

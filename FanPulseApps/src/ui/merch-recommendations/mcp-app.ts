@@ -21,6 +21,19 @@ const recsGrid = document.getElementById("recs-grid")!;
 
 const app = new App({ name: "Merch Recommendations", version: "1.0.0" });
 
+// Render from tool result data sent by the host (avoids re-fetching)
+app.ontoolresult = (params) => {
+  const text = params.content
+    ?.filter((c): c is { type: "text"; text: string } => c.type === "text")
+    .map((c) => c.text)
+    .join("");
+  if (text) {
+    try {
+      renderRecommendations(JSON.parse(text));
+    } catch { /* ignore parse errors */ }
+  }
+};
+
 const CATEGORY_ICONS: Record<string, string> = {
   Jersey: "👕", Hat: "🧢", Accessory: "🧣", Drinkware: "☕",
   Apparel: "🧥", Equipment: "⚽", Collectible: "🏆",
@@ -64,17 +77,6 @@ function renderRecommendations(data: {
     .join("");
 }
 
-async function fetchData() {
-  try {
-    // Default to fan-001 — the host AI typically provides the fanId
-    const result = await app.callServerTool({ name: "GetMerchRecommendations", arguments: { fanId: "fan-001" } });
-    const text = result.content!.filter((c): c is { type: "text"; text: string } => c.type === "text").map((c) => c.text).join("");
-    renderRecommendations(JSON.parse(text));
-  } catch (e) {
-    console.error("Failed to fetch recommendations:", e);
-  }
-}
-
 function handleHostContext(ctx: McpUiHostContext) {
   if (ctx.theme) applyDocumentTheme(ctx.theme);
   if (ctx.styles?.variables) applyHostStyleVariables(ctx.styles.variables);
@@ -84,4 +86,3 @@ function handleHostContext(ctx: McpUiHostContext) {
 app.onhostcontextchanged = handleHostContext;
 applyDocumentTheme(window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
 app.connect().then(() => { const ctx = app.getHostContext(); if (ctx) handleHostContext(ctx); });
-setTimeout(fetchData, 100);

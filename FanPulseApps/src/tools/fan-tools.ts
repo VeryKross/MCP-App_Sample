@@ -102,7 +102,7 @@ const GetMetricsInput = z.object({
     .string()
     .optional()
     .describe("Optional fan ID to get metrics for a specific fan. If omitted, returns top engaged fans."),
-  days: z.number().optional().describe("Number of days to look back for engagement data (default: 90)"),
+  lookbackDays: z.number().optional().describe("Number of days to look back for engagement data. Use this to override the default 90-day window, e.g. 365 for a full year."),
 });
 
 export function registerGetFanEngagementMetrics(server: McpServer) {
@@ -118,15 +118,31 @@ export function registerGetFanEngagementMetrics(server: McpServer) {
       inputSchema: GetMetricsInput.shape,
       _meta: { ui: { resourceUri } },
     },
-    async ({ fanId, days }): Promise<CallToolResult> => {
-      const lookbackDays = days ?? 90;
+    async ({ fanId, lookbackDays: lookbackDaysParam }): Promise<CallToolResult> => {
+      const lookbackDays = lookbackDaysParam ?? 90;
       const cutoffDate = new Date(Date.now() - lookbackDays * 86400000).toISOString().slice(0, 10);
 
       if (fanId) {
+        const fan = db.getFanByIdOrEmail(fanId);
         const metrics = db.getEngagementSummary(fanId, cutoffDate);
+        // Shape as a single-entry FanMetric so the chart UI can render it
+        const fanMetric = {
+          fanId,
+          name: fan ? `${fan.firstName} ${fan.lastName}` : fanId,
+          favoriteTeam: fan?.favoriteTeam ?? "Unknown",
+          totalEvents: metrics.totalEvents,
+          eventTypes: new Set(
+            [metrics.gamesAttended > 0, metrics.appOpens > 0, metrics.socialShares > 0, metrics.contentViews > 0]
+              .filter(Boolean)
+          ).size,
+          gamesAttended: metrics.gamesAttended,
+          lastEngagement: metrics.lastEvent !== "none" ? String(metrics.lastEvent) : "none",
+          engagementScore: metrics.totalEvents * 2 + metrics.gamesAttended * 2,
+          details: metrics,
+        };
         return {
-          content: [{ type: "text", text: JSON.stringify({ fanId, lookbackDays, metrics }, null, 2) }],
-          structuredContent: { fanId, lookbackDays, metrics },
+          content: [{ type: "text", text: JSON.stringify({ lookbackDays, fans: [fanMetric] }, null, 2) }],
+          structuredContent: { lookbackDays, fans: [fanMetric] },
         };
       }
 

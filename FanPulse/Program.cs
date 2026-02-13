@@ -6,11 +6,31 @@ using FanPulse.Tools;
 // Initialize the SQLite database with schema and seed data
 DatabaseInitializer.Initialize();
 
-var builder = Host.CreateApplicationBuilder(args);
+var useHttp = args.Contains("--http") ||
+              Environment.GetEnvironmentVariable("FANPULSE_HTTP") == "true";
 
-builder.Services
-    .AddMcpServer()
-    .WithStdioServerTransport()
-    .WithTools<FanTools>();
+if (useHttp)
+{
+    var builder = WebApplication.CreateBuilder(args);
+    builder.WebHost.UseUrls("http://localhost:5001");
+    builder.Services.AddCors();
+    builder.Services
+        .AddMcpServer()
+        .WithHttpTransport()
+        .WithTools<FanTools>();
 
-await builder.Build().RunAsync();
+    var app = builder.Build();
+    app.UseCors(policy => policy.AllowAnyOrigin().AllowAnyMethod().AllowAnyHeader());
+    app.MapMcp();
+    app.Run();
+}
+else
+{
+    var builder = Microsoft.Extensions.Hosting.Host.CreateApplicationBuilder(args);
+    builder.Services
+        .AddMcpServer()
+        .WithStdioServerTransport()
+        .WithTools<FanTools>();
+
+    await builder.Build().RunAsync();
+}

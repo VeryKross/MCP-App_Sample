@@ -86,18 +86,18 @@ public class FanTools
     [McpServerTool, Description("Get engagement metrics and scores for a specific fan or all fans. Returns engagement frequency, recency, and an overall score.")]
     public static string GetFanEngagementMetrics(
         [Description("Optional fan ID to get metrics for a specific fan. If omitted, returns top engaged fans.")] string? fanId = null,
-        [Description("Number of days to look back for engagement data (default: 90)")] int? days = null)
+        [Description("Number of days to look back for engagement data. Use this to override the default 90-day window, e.g. 365 for a full year.")] int? lookbackDays = null)
     {
         using var connection = new SqliteConnection(DatabaseInitializer.ConnectionString);
         connection.Open();
 
-        var lookbackDays = days ?? 90;
-        var cutoffDate = DateTime.UtcNow.AddDays(-lookbackDays).ToString("yyyy-MM-dd");
+        var effectiveLookbackDays = lookbackDays ?? 90;
+        var cutoffDate = DateTime.UtcNow.AddDays(-effectiveLookbackDays).ToString("yyyy-MM-dd");
 
         if (fanId != null)
         {
             var metrics = GetEngagementSummary(connection, fanId, cutoffDate);
-            return JsonSerializer.Serialize(new { fanId, lookbackDays, metrics }, new JsonSerializerOptions { WriteIndented = true });
+            return JsonSerializer.Serialize(new { fanId, lookbackDays = effectiveLookbackDays, metrics }, new JsonSerializerOptions { WriteIndented = true });
         }
 
         // Return all fans ranked by engagement
@@ -137,7 +137,7 @@ public class FanTools
             });
         }
 
-        return JsonSerializer.Serialize(new { lookbackDays, fans }, new JsonSerializerOptions { WriteIndented = true });
+        return JsonSerializer.Serialize(new { lookbackDays = effectiveLookbackDays, fans }, new JsonSerializerOptions { WriteIndented = true });
     }
 
     [McpServerTool, Description("Search the merchandise catalog with optional filters for team, category, player, and price range.")]

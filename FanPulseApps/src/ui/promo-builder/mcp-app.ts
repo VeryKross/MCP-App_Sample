@@ -9,13 +9,39 @@ const resultPanel = document.getElementById("result-panel")!;
 const startInput = document.getElementById("promo-start") as HTMLInputElement;
 const endInput = document.getElementById("promo-end") as HTMLInputElement;
 
-const app = new App({ name: "Promo Builder", version: "1.0.0" });
-
-// Set default dates
+// Set default dates (these will be overridden by ontoolinput if the host sends values)
 const today = new Date().toISOString().slice(0, 10);
 const thirtyDaysLater = new Date(Date.now() + 30 * 86400000).toISOString().slice(0, 10);
 startInput.value = today;
 endInput.value = thirtyDaysLater;
+
+const app = new App({ name: "Promo Builder", version: "1.0.0" });
+
+// Pre-populate form from tool input sent by host
+app.ontoolinput = (params) => {
+  const args = params.arguments ?? {};
+  if (args.name) (document.getElementById("promo-name") as HTMLInputElement).value = String(args.name);
+  if (args.description) (document.getElementById("promo-desc") as HTMLTextAreaElement).value = String(args.description);
+  if (args.discountPercent != null) {
+    discountSlider.value = String(args.discountPercent);
+    discountValue.textContent = `${args.discountPercent}%`;
+  }
+  if (args.targetSegment) {
+    const seg = document.getElementById("promo-segment") as HTMLSelectElement;
+    // Map common LLM terms to select values
+    const val = String(args.targetSegment).toLowerCase();
+    if (val.includes("superfan") || val.includes("high")) seg.value = "high_engagement";
+    else if (val.includes("low")) seg.value = "low_engagement";
+    else if (val.includes("no_purchase")) seg.value = "no_purchases";
+    else seg.value = val;
+  }
+  if (args.productCategory) {
+    const cat = document.getElementById("promo-category") as HTMLSelectElement;
+    cat.value = String(args.productCategory);
+  }
+  if (args.startDate) startInput.value = String(args.startDate);
+  if (args.endDate) endInput.value = String(args.endDate);
+};
 
 discountSlider.addEventListener("input", () => {
   discountValue.textContent = `${discountSlider.value}%`;
