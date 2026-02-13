@@ -82,6 +82,28 @@ Open **http://localhost:5000** and start asking questions:
 
 Both servers read from the same SQLite database, so the underlying data is identical — only the presentation differs.
 
+## Using with VS Code Copilot
+
+You can also use the FanPulseApps server directly inside **VS Code Copilot Chat** — no Dashboard needed. This repo includes a `.vscode/mcp.json` that configures the server automatically.
+
+### Setup
+
+1. **Build the prerequisites** (if you haven't already):
+   ```powershell
+   dotnet run --project FanPulse   # creates + seeds fanpulse.db, then Ctrl+C
+   cd FanPulseApps && npm install && npm run build && cd ..
+   ```
+
+2. **Open this project in VS Code** and open **Copilot Chat** in **Agent mode**
+
+3. **Start the MCP server**: open the Command Palette (`Ctrl+Shift+P`) → `MCP: List Servers` → start `fanpulse-apps`
+
+4. **Ask a question** — try *"Show me the fan segments"* or *"What merchandise do we have?"*
+
+VS Code supports the MCP Apps extension natively, so the interactive UIs (segment cards, engagement charts, product grids, etc.) render **directly in the chat panel**. The host injects its own theme — so the same UI that appears in VS Code's Dark Modern theme would look different in another MCP-compatible client.
+
+> **Note:** VS Code shows both the LLM's text summary and the interactive UI. This is by design — the text `content` is a universal fallback for any MCP client, while the UI is an optional enhancement that capable hosts render alongside it.
+
 ## Documentation
 
 - [FanPulse Architecture](FanPulseApps/doc/FanPulse-Architecture.md) — System-wide architecture with Mermaid diagrams
