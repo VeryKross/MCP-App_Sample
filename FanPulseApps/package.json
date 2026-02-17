@@ -1,0 +1,36 @@
+{
+  "name": "fanpulse-apps",
+  "version": "1.0.0",
+  "type": "module",
+  "description": "FanPulse MCP Server with interactive MCP App UIs",
+  "main": "dist/server.js",
+  "files": ["dist"],
+  "scripts": {
+    "build": "tsc --noEmit && node build-ui.js && tsc -p tsconfig.server.json",
+    "build:ui": "node build-ui.js",
+    "start": "node dist/main.js",
+    "start:stdio": "node dist/main.js --stdio",
+    "start:http": "node dist/main.js",
+    "dev": "concurrently \"npm run build:ui -- --watch\" \"node --watch dist/main.js\""
+  },
+  "dependencies": {
+    "@modelcontextprotocol/ext-apps": "^1.0.0",
+    "@modelcontextprotocol/sdk": "^1.24.0",
+    "better-sqlite3": "^11.8.1",
+    "chart.js": "^4.4.0",
+    "cors": "^2.8.5",
+    "express": "^5.1.0",
+    "zod": "^4.1.13"
+  },
+  "devDependencies": {
+    "@types/better-sqlite3": "^7.6.12",
+    "@types/cors": "^2.8.19",
+    "@types/express": "^5.0.0",
+    "@types/node": "^22.10.0",
+    "concurrently": "^9.2.1",
+    "cross-env": "^10.1.0",
+    "typescript": "^5.9.3",
+    "vite": "^6.0.0",
+    "vite-plugin-singlefile": "^2.3.0"
+  }
+}

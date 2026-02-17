@@ -1,0 +1,12 @@
+{
+  "profiles": {
+    "stdio": {
+      "commandName": "Project"
+    },
+    "http": {
+      "commandName": "Project",
+      "commandLineArgs": "--http",
+      "applicationUrl": "http://localhost:5001"
+    }
+  }
+}

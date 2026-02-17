@@ -1,0 +1,9 @@
+{
+  "servers": {
+    "fanpulse-apps": {
+      "type": "stdio",
+      "command": "node",
+      "args": ["FanPulseApps/dist/main.js", "--stdio"]
+    }
+  }
+}
