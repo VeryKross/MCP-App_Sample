@@ -2,7 +2,8 @@ import { useState, useCallback, useRef } from 'react'
 import { useMcpClients } from '../hooks/useMcpClient'
 import { runChat } from '../hooks/chatService'
 import { ChatPanel } from './ChatPanel'
-import type { ChatMessage } from '../types'
+import { XRayPanel } from './XRayPanel'
+import type { ChatMessage, XRayEvent, XRayTurn } from '../types'
 import type { CallToolResult } from '@modelcontextprotocol/sdk/types.js'
 import { getToolUiResourceUri } from '@modelcontextprotocol/ext-apps/app-bridge'
 
@@ -23,6 +24,40 @@ export function App() {
   const appsHistoryRef = useRef<Array<{ role: string; content: string }>>([])
   // Track tool call metadata for AppBridge (keyed by message index in appsMessages)
   const [appsToolCallMeta, setAppsToolCallMeta] = useState<Map<number, ToolCallMeta>>(new Map())
+  // X-Ray panel state
+  const [xrayOpen, setXrayOpen] = useState(false)
+  const [xrayTurns, setXrayTurns] = useState<{ fanpulse: XRayTurn[]; fanpulseapps: XRayTurn[] }>({
+    fanpulse: [],
+    fanpulseapps: [],
+  })
+
+  const addXRayTurn = (server: 'fanpulse' | 'fanpulseapps', prompt: string): number => {
+    const newTurn: XRayTurn = { prompt, startedAt: Date.now(), events: [], complete: false }
+    setXrayTurns((prev) => ({ ...prev, [server]: [...prev[server], newTurn] }))
+    return Date.now() // used as a key; actual index computed from state length
+  }
+
+  const appendXRayEvent = (server: 'fanpulse' | 'fanpulseapps', event: XRayEvent) => {
+    setXrayTurns((prev) => {
+      const turns = prev[server]
+      if (turns.length === 0) return prev
+      const updated = [...turns]
+      const last = { ...updated[updated.length - 1] }
+      last.events = [...last.events, event]
+      updated[updated.length - 1] = last
+      return { ...prev, [server]: updated }
+    })
+  }
+
+  const completeXRayTurn = (server: 'fanpulse' | 'fanpulseapps') => {
+    setXrayTurns((prev) => {
+      const turns = prev[server]
+      if (turns.length === 0) return prev
+      const updated = [...turns]
+      updated[updated.length - 1] = { ...updated[updated.length - 1], complete: true }
+      return { ...prev, [server]: updated }
+    })
+  }
 
   const bothConnected = fanpulse.status === 'connected' && fanpulseapps.status === 'connected'
 
@@ -39,6 +74,7 @@ export function App() {
 
     // Run C# server first (sequential to avoid rate limits)
     setActivePanel('fanpulse')
+    addXRayTurn('fanpulse', prompt)
     try {
       const { text, updatedHistory } = await runChat(
         prompt,
@@ -52,16 +88,19 @@ export function App() {
             .join('\n')
           return textContent
         },
-        (msg) => setFpMessages((prev) => [...prev, msg])
+        (msg) => setFpMessages((prev) => [...prev, msg]),
+        (event) => appendXRayEvent('fanpulse', event)
       )
       fpHistoryRef.current = updatedHistory as never[]
       setFpMessages((prev) => [...prev, { role: 'assistant', content: text }])
     } catch (err) {
       setFpMessages((prev) => [...prev, { role: 'error', content: String(err) }])
     }
+    completeXRayTurn('fanpulse')
 
     // Then run Apps server
     setActivePanel('fanpulseapps')
+    addXRayTurn('fanpulseapps', prompt)
     try {
       let lastToolMeta: (ToolCallMeta & { html: string }) | null = null
 
@@ -98,13 +137,22 @@ export function App() {
 
           return textContent
         },
-        (msg) => setAppsMessages((prev) => [...prev, msg])
+        (msg) => setAppsMessages((prev) => [...prev, msg]),
+        (event) => appendXRayEvent('fanpulseapps', event)
       )
       appsHistoryRef.current = updatedHistory as never[]
 
       // If we have UI HTML from the last tool call, attach it to the assistant message
       if (lastToolMeta) {
         const meta = lastToolMeta
+        appendXRayEvent('fanpulseapps', {
+          type: 'ui_loaded',
+          timestamp: Date.now(),
+          durationMs: 0,
+          label: 'UI Loaded',
+          summary: `The Apps server provided an interactive UI for "${meta.toolName}" — the Dashboard is showing both text output and an interactive UI`,
+          toolName: meta.toolName,
+        })
         setAppsMessages((prev) => {
           const newIndex = prev.length
           setAppsToolCallMeta((prevMeta) => {
@@ -120,6 +168,7 @@ export function App() {
     } catch (err) {
       setAppsMessages((prev) => [...prev, { role: 'error', content: String(err) }])
     }
+    completeXRayTurn('fanpulseapps')
 
     setActivePanel('none')
     setIsProcessing(false)
@@ -132,23 +181,39 @@ export function App() {
         <span className="subtitle">
           Side-by-side comparison: text-only vs interactive MCP Apps
         </span>
+        <button
+          className={`xray-toggle ${xrayOpen ? 'active' : ''}`}
+          onClick={() => setXrayOpen((v) => !v)}
+          title="Show interaction details"
+        >
+          🔍 Under the Hood
+        </button>
       </div>
 
-      <div className="panels">
-        <ChatPanel
-          connection={fanpulse}
-          label="FanPulse (C# Server)"
-          messages={fpMessages}
-          isProcessing={isProcessing && activePanel === 'fanpulse'}
-        />
-        <ChatPanel
-          connection={fanpulseapps}
-          label="FanPulse Apps (TypeScript Server)"
-          messages={appsMessages}
-          isProcessing={isProcessing && activePanel === 'fanpulseapps'}
-          showAppFrames
-          toolCallMeta={appsToolCallMeta}
-        />
+      <div className="panels-container">
+        {xrayOpen && (
+          <XRayPanel
+            turns={xrayTurns}
+            activeServer={activePanel}
+            onClose={() => setXrayOpen(false)}
+          />
+        )}
+        <div className="panels">
+          <ChatPanel
+            connection={fanpulse}
+            label="FanPulse (C# Server)"
+            messages={fpMessages}
+            isProcessing={isProcessing && activePanel === 'fanpulse'}
+          />
+          <ChatPanel
+            connection={fanpulseapps}
+            label="FanPulse Apps (TypeScript Server)"
+            messages={appsMessages}
+            isProcessing={isProcessing && activePanel === 'fanpulseapps'}
+            showAppFrames
+            toolCallMeta={appsToolCallMeta}
+          />
+        </div>
       </div>
 
       <div className="input-bar">
