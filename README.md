@@ -34,6 +34,14 @@ The FanPulse Dashboard lets you ask the same question and instantly see the diff
 
 This makes the value of the MCP Apps extension immediately visible in a demo setting.
 
+### Under the Hood (X-Ray) Panel
+
+The Dashboard includes a **🔍 Under the Hood** overlay that explains each step of the AI + MCP flow in plain language.
+
+- Open it with the **"🔍 Under the Hood"** button in the Dashboard header
+- Switch tabs to inspect either the **FanPulse (C#)** or **FanPulse Apps (TS)** pipeline
+- Expand nodes such as **AI Analyzing**, **Tool Selected**, **AI Processing**, and **UI Loaded** to see why tools were chosen and how results were turned into user-facing responses
+
 ## Quick Start
 
 ### Prerequisites

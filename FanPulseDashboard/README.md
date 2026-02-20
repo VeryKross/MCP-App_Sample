@@ -87,6 +87,16 @@ Open **http://localhost:5173** and ask questions like:
 - *"What merchandise do we have for Apex Racing?"*
 - *"Create a 20% promotion for superfans"*
 
+## Under the Hood (X-Ray) Panel
+
+Use the **🔍 Under the Hood** button in the header to open an overlay that visualizes the full interaction flow for each prompt.
+
+- **Two tabs**: inspect either the FanPulse (C#) pipeline or FanPulse Apps (TS) pipeline
+- **Step-by-step nodes**: You Asked → AI Analyzing → Tool Selected → Server Called → Data Returned → AI Processing → Response Ready
+- **Apps-specific visibility**: the **UI Loaded** node appears when an interactive ext-apps UI is attached
+- **Plain-language details**: expanding **AI Analyzing** and **AI Processing** shows why tools were selected and how returned data becomes the final answer
+- **Technical fallback**: raw payload details are still available under each node's **Technical details** section
+
 ## Project Structure
 
 ```
