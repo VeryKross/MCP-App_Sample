@@ -128,7 +128,7 @@ export function App() {
   return (
     <div className="app">
       <div className="app-header">
-        <h1>🏀 FanPulse Dashboard</h1>
+        <h1>🏎️ FanPulse Dashboard</h1>
         <span className="subtitle">
           Side-by-side comparison: text-only vs interactive MCP Apps
         </span>
