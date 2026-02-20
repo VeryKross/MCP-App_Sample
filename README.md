@@ -41,6 +41,7 @@ The Dashboard includes a **🔍 Under the Hood** overlay that explains each step
 - Open it with the **"🔍 Under the Hood"** button in the Dashboard header
 - Switch tabs to inspect either the **FanPulse (C#)** or **FanPulse Apps (TS)** pipeline
 - Expand nodes such as **AI Analyzing**, **Tool Selected**, **AI Processing**, and **UI Loaded** to see why tools were chosen and how results were turned into user-facing responses
+<img width="3369" height="1923" alt="image" src="https://github.com/user-attachments/assets/a7cb0158-3ba7-4bf0-9057-c050620922a6" />
 
 ## Quick Start
 
